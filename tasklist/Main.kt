@@ -1,5 +1,6 @@
 package tasklist
 
+import kotlinx.datetime.*
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.LocalTime
@@ -8,15 +9,17 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 class Task(
-        private var text: String = "",
-        val taskPriority: String = "",
-        val day: LocalDate? = null,
-        val time: LocalTime? = null,
+    private var text: String = "",
+    private var taskPriority: String = "",
+    private var day: LocalDate? = null,
+    private var time: LocalTime? = null,
+    // изм
+    private var shelfDate: String = ""
 ) {
 
     private val tasks = mutableListOf<Task>()
 
-    fun createTaskList(taskPriority: String, day: LocalDate, time: LocalTime) {
+    private fun createTaskList(taskPriority: String, day: LocalDate, time: LocalTime) {
         var taskText = ""
 
         while (true) {
@@ -24,7 +27,7 @@ class Task(
             val textInput = readln().trim()
 
             if (textInput.isBlank() && taskText.isNotBlank()) {
-                //TODO добавить taskPriority и date time
+
                 tasks.add(Task(taskText, taskPriority, day, time))
                 break
             } else if (textInput.isBlank() && taskText.isBlank()) {
@@ -36,9 +39,21 @@ class Task(
         }
     }
 
-    fun chooseDay(): LocalDate {
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        var date: LocalDate
+    private fun chooseTaskPriority(): String {
+        while (true) {
+            println("Input the task priority (C, H, N, L):")
+            val input = readln().trim().uppercase()
+            try {
+                val taskPriority = TaskPriority.valueOf(input)
+                return taskPriority.toString()
+            } catch (e: IllegalArgumentException) {
+                continue
+            }
+        }
+    }
+
+    private fun chooseDay(): LocalDate {
+        DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
         while (true) {
             print("Input the date (yyyy-mm-dd):")
@@ -61,8 +76,7 @@ class Task(
             } catch (e: DateTimeException) {
                 println("The input date is invalid")
                 continue
-            }
-            catch (e: NumberFormatException){
+            } catch (e: NumberFormatException) {
                 println("The input date is invalid")
                 continue
             }
@@ -70,7 +84,7 @@ class Task(
 
     }
 
-    fun chooseTime(): LocalTime {
+    private fun chooseTime(): LocalTime {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         var time: LocalTime?
 
@@ -89,31 +103,193 @@ class Task(
                 } else println("The input time is invalid")
             } catch (e: DateTimeParseException) {
                 println("The input time is invalid")
+                continue
             } catch (e: NumberFormatException) {
                 println("The input time is invalid")
-
-            }
-        }
-
-    }
-
-    fun chooseTaskPriority(): String {
-        while (true) {
-            println("Input the task priority (C, H, N, L):")
-            val input = readln().trim().uppercase()
-            try {
-                val taskPriority = TaskPriority.valueOf(input)
-                return taskPriority.toString()
-            } catch (e: IllegalArgumentException) {
+                continue
+            } catch (e: IndexOutOfBoundsException) {
+                println("The input time is invalid")
                 continue
             }
         }
+
     }
 
-    fun printTaskList() {
+    private fun setText(): String {
+        var taskText = ""
+        println("Input a new task (enter a blank line to end):")
+        while (true) {
+
+            val textInput = readln().trim()
+
+            if (textInput.isBlank() && taskText.isNotBlank()) {
+                return taskText
+            } else if (textInput.isBlank() && taskText.isBlank()) {
+                println("The task is blank")
+                break
+            }
+
+            taskText += if (taskText.isBlank()) textInput else "\n   $textInput"
+        }
+        return ""
+    }
+
+    // TODO Доделать функцию
+
+    private fun setShelfDate(task: Task): String {
+        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.of("UTC+0")).date
+
+        val numberOfDays = task.day?.let { currentDate.daysUntil(it.toKotlinLocalDate()) }
+        if (numberOfDays != null) {
+            return (when {
+                numberOfDays == 0 -> "T"
+                numberOfDays > 0 -> "I"
+                else -> "O"
+            })
+        }
+        return ""
+    }
+
+    private fun printTasks(tasks: MutableList<Task>) {
+        tasks.forEachIndexed { index, task ->
+            println(
+                "${index + 1}".padEnd(
+                    3,
+                    ' '
+                ) + "${task.day} ${task.time} ${task.taskPriority} ${setShelfDate(task)}" + "\n   " + task + "\n"
+            )
+        }
+    }
+
+    private fun printTaskList() {
         if (tasks.isEmpty()) {
             println("No tasks have been input")
         } else printTasks(tasks)
+    }
+
+    private fun deleteTask() {
+        printTasks(tasks)
+        while (true) {
+            if (tasks.isNotEmpty()) {
+                try {
+
+                    println("Input the task number (1-${tasks.size}):")
+                    val input = readln().trim().toInt()
+                    tasks.removeAt(input - 1)
+                    println("The task is deleted")
+                    break
+                } catch (e: IllegalArgumentException) {
+                    println("Invalid task number")
+                    continue
+                } catch (e: IndexOutOfBoundsException) {
+                    println("Invalid task number")
+                    continue
+                }
+            } else {
+                println("No tasks have been input")
+                break
+            }
+        }
+
+    }
+
+    private fun editTask() {
+        printTasks(tasks)
+        while (true) {
+            if (tasks.isNotEmpty()) {
+                try {
+                    println("Input the task number (1-${tasks.size}):")
+
+                    val input = readln().trim().toInt()
+
+                    changeTaskField(tasks[input - 1])
+                    println("The task is changed")
+                    break
+
+                } catch (e: IllegalArgumentException) {
+                    println("Invalid task number")
+                    continue
+                } catch (e: IndexOutOfBoundsException) {
+                    println("Invalid task number")
+                    continue
+                }
+
+            } else {
+                println("No tasks have been input")
+                break
+            }
+        }
+
+    }
+
+    private fun changeTaskField(task: Task) {
+        while (true) {
+            println("Input a field to edit (priority, date, time, task):")
+            when (readln()) {
+                "priority" -> {
+                    task.taskPriority = task.chooseTaskPriority()
+                    break
+                }
+
+                "date" -> {
+                    task.day = task.chooseDay()
+                    break
+                }
+
+                "time" -> {
+                    task.time = task.chooseTime()
+                    break
+                }
+
+                "task" -> {
+                    task.text = task.setText()
+                    break
+                }
+
+                else -> {
+                    println("Invalid field")
+                    continue
+                }
+            }
+        }
+    }
+
+    fun chooseAction(task: Task) {
+        while (true) {
+
+            println("Input an action (add, print, edit, delete, end):")
+            when (readln()) {
+
+                "add" -> {
+                    val taskPriorityInput = task.chooseTaskPriority()
+                    val dayInput = task.chooseDay()
+                    val timeInput = task.chooseTime()
+
+                    println("Input a new task (enter a blank line to end):")
+                    task.createTaskList(taskPriorityInput, dayInput, timeInput)
+                }
+
+                "print" -> task.printTaskList()
+
+                "end" -> {
+                    println("Tasklist exiting!")
+                    break
+                }
+
+                "edit" -> {
+                    editTask()
+                }
+
+                "delete" -> {
+                    deleteTask()
+                }
+
+                else -> {
+                    println("The input action is invalid")
+                    continue
+                }
+            }
+        }
     }
 
     override fun toString(): String {
@@ -122,42 +298,9 @@ class Task(
 }
 //TODO Сделать чтобы пустой ввод не добавлялся
 
-fun chooseAction(task: Task) {
-    while (true) {
-        println("Input an action (add, print, end):")
-        when (readln()) {
-            "add" -> {
-                val taskPriorityInput = task.chooseTaskPriority()
-                val dayInput = task.chooseDay()
-                val timeInput = task.chooseTime()
-
-                println("Input a new task (enter a blank line to end):")
-                task.createTaskList(taskPriorityInput, dayInput, timeInput)
-            }
-
-            "print" -> task.printTaskList()
-
-            "end" -> {
-                println("Tasklist exiting!")
-                break
-            }
-
-            else -> {
-                println("The input action is invalid")
-                continue
-            }
-        }
-    }
-}
-
-fun printTasks(tasks: MutableList<Task>) {
-    tasks.forEachIndexed { index, task ->
-        println("${index + 1}".padEnd(3, ' ') + "${task.day} ${task.time} ${task.taskPriority}" + "\n   " + task + "\n")
-    }
-}
 
 fun main() {
     val task = Task()
-    chooseAction(task)
+    task.chooseAction(task)
 
 }
