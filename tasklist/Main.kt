@@ -14,8 +14,6 @@ class Task(
     private var day: LocalDate? = null,
     private var time: LocalTime? = null,
     private var taskText: String = "",
-    // изм
-    private var shelfDate: String = ""
 ) {
 
     private val tasks = mutableListOf<Task>()
@@ -26,43 +24,12 @@ class Task(
 
     }
 
-    private fun setShelfDate(task: Task): String {
-        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.of("UTC+0")).date
-
-        val numberOfDays = task.day?.let { currentDate.daysUntil(it.toKotlinLocalDate()) }
-        if (numberOfDays != null) {
-            return (when {
-                numberOfDays == 0 -> "T"
-                numberOfDays > 0 -> "I"
-                else -> "O"
-            })
-        }
-        return ""
-    }
-
-    private fun printTasks(tasks: MutableList<Task>) {
-        tasks.forEachIndexed { index, task ->
-            println(
-                "${index + 1}".padEnd(
-                    3,
-                    ' '
-                ) + "${task.day} ${task.time} ${task.taskPriority} ${setShelfDate(task)}" + "\n   " + task + "\n"
-            )
-        }
-    }
-
-    private fun printTaskList() {
-        if (tasks.isEmpty()) {
-            println("No tasks have been input")
-        } else printTasks(tasks)
-    }
-
     private fun deleteTask() {
-        printTasks(tasks)
+
         while (true) {
             if (tasks.isNotEmpty()) {
                 try {
-
+                    printList(tasks)
                     println("Input the task number (1-${tasks.size}):")
                     val input = readln().trim().toInt()
                     tasks.removeAt(input - 1)
@@ -84,10 +51,11 @@ class Task(
     }
 
     private fun editTask() {
-        printTasks(tasks)
+
         while (true) {
             if (tasks.isNotEmpty()) {
                 try {
+                    printList(tasks)
                     println("Input the task number (1-${tasks.size}):")
 
                     val input = readln().trim().toInt()
@@ -149,12 +117,31 @@ class Task(
             println("Input the task priority (C, H, N, L):")
             val input = readln().trim().uppercase()
             try {
-                val taskPriority = TaskPriority.valueOf(input)
-                return taskPriority.toString()
+                return when (input) {
+                    "C" -> "\u001B[101m \u001B[0m"
+                    "H" -> "\u001B[103m \u001B[0m"
+                    "N" -> "\u001B[102m \u001B[0m"
+                    "L" -> "\u001B[104m \u001B[0m"
+                    else -> continue
+                }
             } catch (e: IllegalArgumentException) {
                 continue
             }
         }
+    }
+
+    private fun setShelfDate(task: Task): String {
+        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.of("UTC+0")).date
+
+        val numberOfDays = task.day?.let { currentDate.daysUntil(it.toKotlinLocalDate()) }
+        if (numberOfDays != null) {
+            return (when {
+                numberOfDays == 0 -> Color.GREEN.color
+                numberOfDays > 0 -> Color.YELLOW.color
+                else -> Color.RED.color
+            })
+        }
+        return ""
     }
 
     private fun chooseDay(): LocalDate {
@@ -234,7 +221,7 @@ class Task(
                 break
             }
 
-            taskText += if (taskText.isBlank()) textInput else "\n   $textInput"
+            taskText += if (taskText.isBlank()) textInput else "\n$textInput"
         }
         return ""
     }
@@ -253,7 +240,7 @@ class Task(
                     task.createTaskList(taskPriorityInput, dayInput, timeInput, taskText)
                 }
 
-                "print" -> task.printTaskList()
+                "print" -> task.printList(tasks)
 
                 "end" -> {
                     println("Tasklist exiting!")
@@ -278,6 +265,65 @@ class Task(
 
     override fun toString(): String {
         return taskText
+    }
+
+    private fun taskToLust(string: String): MutableList<String> {
+        val listTask = mutableListOf<String>()
+        var i = 0
+        var str = ""
+        for (ch in string) {
+            if (ch == '\n') {
+                listTask += str
+                i = 0
+                str = ""
+            } else if (i == 44) {
+                listTask += str
+                i = 1
+                str = ch.toString()
+            } else {
+                str += ch
+                i++
+            }
+        }
+        listTask += str
+        if (listTask.size > 1) {
+            for (j in 1..listTask.lastIndex) {
+                listTask[j] = "|    |            |       |   |   |${listTask[j]}${" ".repeat(44 - listTask[j].length)}|"
+            }
+        }
+        return listTask
+    }
+
+    private fun printList(task: MutableList<Task>) {
+        if (task.isEmpty()) {
+            println("No tasks have been input")
+            return
+        }
+
+
+
+        println(
+            "+----+------------+-------+---+---+--------------------------------------------+\n" +
+                    "| N  |    Date    | Time  | P | D |                   Task                     |\n" +
+                    "+----+------------+-------+---+---+--------------------------------------------+"
+        )
+
+        for (i in 1..task.size) {
+            val listTask = taskToLust(task[i - 1].toString())
+            println(
+                "| $i  | ${task[i - 1].day} | ${task[i - 1].time} | ${task[i - 1].taskPriority} | ${
+                    task[i - 1].setShelfDate(
+                        task[i - 1]
+                    )
+                } |${listTask[0]}${" ".repeat(44 - listTask[0].length)}|"
+            )
+            if (listTask.size > 1) {
+                for (j in 1..listTask.lastIndex) {
+                    println(listTask[j])
+                }
+            }
+            println("+----+------------+-------+---+---+--------------------------------------------+")
+        }
     }
 }
 
