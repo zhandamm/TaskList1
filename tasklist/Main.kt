@@ -9,132 +9,22 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 class Task(
-    private var text: String = "",
+
     private var taskPriority: String = "",
     private var day: LocalDate? = null,
     private var time: LocalTime? = null,
+    private var taskText: String = "",
     // изм
     private var shelfDate: String = ""
 ) {
 
     private val tasks = mutableListOf<Task>()
 
-    private fun createTaskList(taskPriority: String, day: LocalDate, time: LocalTime) {
-        var taskText = ""
+    private fun createTaskList(taskPriority: String, day: LocalDate, time: LocalTime, taskText: String) {
 
-        while (true) {
-
-            val textInput = readln().trim()
-
-            if (textInput.isBlank() && taskText.isNotBlank()) {
-
-                tasks.add(Task(taskText, taskPriority, day, time))
-                break
-            } else if (textInput.isBlank() && taskText.isBlank()) {
-                println("The task is blank")
-                break
-            }
-
-            taskText += if (taskText.isBlank()) textInput else "\n   $textInput"
-        }
-    }
-
-    private fun chooseTaskPriority(): String {
-        while (true) {
-            println("Input the task priority (C, H, N, L):")
-            val input = readln().trim().uppercase()
-            try {
-                val taskPriority = TaskPriority.valueOf(input)
-                return taskPriority.toString()
-            } catch (e: IllegalArgumentException) {
-                continue
-            }
-        }
-    }
-
-    private fun chooseDay(): LocalDate {
-        DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
-        while (true) {
-            print("Input the date (yyyy-mm-dd):")
-            val input = readln()
-
-            try {
-                // Проверяем, является ли дата допустимой
-                val (year, month, day) = input.split("-").map { it.toInt() }
-                val yearMonth = YearMonth.of(year, month)
-                val date = LocalDate.of(year, month, day)
-                if (date.isAfter(yearMonth.atEndOfMonth()) || date.isBefore(yearMonth.atDay(1))) {
-                    println("The input date is invalid")
-                    continue
-                }
-
-                return date
-            } catch (e: DateTimeParseException) {
-                println("The input date is invalid")
-                continue
-            } catch (e: DateTimeException) {
-                println("The input date is invalid")
-                continue
-            } catch (e: NumberFormatException) {
-                println("The input date is invalid")
-                continue
-            }
-        }
+        tasks.add(Task(taskPriority, day, time, taskText))
 
     }
-
-    private fun chooseTime(): LocalTime {
-        val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        var time: LocalTime?
-
-        while (true) {
-            print("Input the time (hh:mm):")
-            val input = readln()
-
-            try {
-                val timeParts = input.split(":")
-                val hour = timeParts[0].toInt()
-                val minute = timeParts[1].toInt()
-                if (hour in 0..23 && minute in 0..59) {
-                    val formattedInput = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-                    time = LocalTime.parse(formattedInput, formatter)
-                    return time
-                } else println("The input time is invalid")
-            } catch (e: DateTimeParseException) {
-                println("The input time is invalid")
-                continue
-            } catch (e: NumberFormatException) {
-                println("The input time is invalid")
-                continue
-            } catch (e: IndexOutOfBoundsException) {
-                println("The input time is invalid")
-                continue
-            }
-        }
-
-    }
-
-    private fun setText(): String {
-        var taskText = ""
-        println("Input a new task (enter a blank line to end):")
-        while (true) {
-
-            val textInput = readln().trim()
-
-            if (textInput.isBlank() && taskText.isNotBlank()) {
-                return taskText
-            } else if (textInput.isBlank() && taskText.isBlank()) {
-                println("The task is blank")
-                break
-            }
-
-            taskText += if (taskText.isBlank()) textInput else "\n   $textInput"
-        }
-        return ""
-    }
-
-    // TODO Доделать функцию
 
     private fun setShelfDate(task: Task): String {
         val currentDate = Clock.System.now().toLocalDateTime(TimeZone.of("UTC+0")).date
@@ -242,7 +132,7 @@ class Task(
                 }
 
                 "task" -> {
-                    task.text = task.setText()
+                    task.taskText = task.setText()
                     break
                 }
 
@@ -252,6 +142,101 @@ class Task(
                 }
             }
         }
+    }
+
+    private fun chooseTaskPriority(): String {
+        while (true) {
+            println("Input the task priority (C, H, N, L):")
+            val input = readln().trim().uppercase()
+            try {
+                val taskPriority = TaskPriority.valueOf(input)
+                return taskPriority.toString()
+            } catch (e: IllegalArgumentException) {
+                continue
+            }
+        }
+    }
+
+    private fun chooseDay(): LocalDate {
+        DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+        while (true) {
+            print("Input the date (yyyy-mm-dd):")
+            val input = readln()
+
+            try {
+                // Проверяем, является ли дата допустимой
+                val (year, month, day) = input.split("-").map { it.toInt() }
+                val yearMonth = YearMonth.of(year, month)
+                val date = LocalDate.of(year, month, day)
+                if (date.isAfter(yearMonth.atEndOfMonth()) || date.isBefore(yearMonth.atDay(1))) {
+                    println("The input date is invalid")
+                    continue
+                }
+
+                return date
+            } catch (e: DateTimeParseException) {
+                println("The input date is invalid")
+                continue
+            } catch (e: DateTimeException) {
+                println("The input date is invalid")
+                continue
+            } catch (e: NumberFormatException) {
+                println("The input date is invalid")
+                continue
+            }
+        }
+
+    }
+
+    private fun chooseTime(): LocalTime {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        var time: LocalTime?
+
+        while (true) {
+            print("Input the time (hh:mm):")
+            val input = readln()
+
+            try {
+                val timeParts = input.split(":")
+                val hour = timeParts[0].toInt()
+                val minute = timeParts[1].toInt()
+                if (hour in 0..23 && minute in 0..59) {
+                    val formattedInput = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
+                    time = LocalTime.parse(formattedInput, formatter)
+                    return time
+                } else println("The input time is invalid")
+            } catch (e: DateTimeParseException) {
+                println("The input time is invalid")
+                continue
+            } catch (e: NumberFormatException) {
+                println("The input time is invalid")
+                continue
+            } catch (e: IndexOutOfBoundsException) {
+                println("The input time is invalid")
+                continue
+            }
+        }
+
+    }
+
+    private fun setText(): String {
+        var taskText = ""
+        println("Input a new task (enter a blank line to end):")
+        while (true) {
+
+            val textInput = readln().trim()
+
+            if (textInput.isBlank() && taskText.isNotBlank()) {
+                return taskText
+            } else if (textInput.isBlank() && taskText.isBlank()) {
+                println("The task is blank")
+                break
+            }
+
+            taskText += if (taskText.isBlank()) textInput else "\n   $textInput"
+        }
+        return ""
     }
 
     fun chooseAction(task: Task) {
@@ -264,9 +249,8 @@ class Task(
                     val taskPriorityInput = task.chooseTaskPriority()
                     val dayInput = task.chooseDay()
                     val timeInput = task.chooseTime()
-
-                    println("Input a new task (enter a blank line to end):")
-                    task.createTaskList(taskPriorityInput, dayInput, timeInput)
+                    val taskText = task.setText()
+                    task.createTaskList(taskPriorityInput, dayInput, timeInput, taskText)
                 }
 
                 "print" -> task.printTaskList()
@@ -293,10 +277,9 @@ class Task(
     }
 
     override fun toString(): String {
-        return text
+        return taskText
     }
 }
-//TODO Сделать чтобы пустой ввод не добавлялся
 
 
 fun main() {
