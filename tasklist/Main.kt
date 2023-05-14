@@ -1,6 +1,9 @@
 package tasklist
 
 import kotlinx.datetime.*
+import com.squareup.moshi.*
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.io.File
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.LocalTime
@@ -8,20 +11,63 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
+
 class Task(
 
     private var taskPriority: String = "",
+
     private var day: LocalDate? = null,
     private var time: LocalTime? = null,
     private var taskText: String = "",
-) {
+    private var deadlineColor: String = "",
 
-    private val tasks = mutableListOf<Task>()
+    ) {
 
-    private fun createTaskList(taskPriority: String, day: LocalDate, time: LocalTime, taskText: String) {
+    private var tasks = mutableListOf<Task>()
 
-        tasks.add(Task(taskPriority, day, time, taskText))
+    private fun createTaskList(
+        taskPriority: String,
+        day: LocalDate,
+        time: LocalTime,
+        taskText: String,
+        deadlineColor: String
+    ) {
 
+        tasks.add(Task(taskPriority, day, time, taskText, deadlineColor))
+
+    }
+
+    private fun saveData() {
+
+//        val jsonFile = File("C:\\Users\\saied\\IdeaProjects\\Tasklist1\\Tasklist\\task\\tasklist.json")
+        val jsonFile = File("tasklist.json")
+
+        val moshiBuilder = Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .add(LocalDate::class.java, LocalDateJsonAdapter().nullSafe())
+            .add(LocalTime::class.java, LocalTimeJsonAdapter().nullSafe())
+            .build()
+
+        val type = Types.newParameterizedType(MutableList::class.java, Task::class.java)
+        val taskListAdapter = moshiBuilder.adapter<MutableList<Task>>(type)
+        val json: String = taskListAdapter.toJson(tasks)
+        jsonFile.writeText(json)
+    }
+
+    fun retrieveData() {
+//        val jsonFile = File("C:\\Users\\saied\\IdeaProjects\\Tasklist1\\Tasklist\\task\\tasklist.json")
+        val jsonFile = File("tasklist.json")
+
+        if (jsonFile.exists()) {
+            val moshiBuilder = Moshi.Builder()
+                .addLast(KotlinJsonAdapterFactory())
+                .add(LocalDate::class.java, LocalDateJsonAdapter().nullSafe())
+                .add(LocalTime::class.java, LocalTimeJsonAdapter().nullSafe())
+                .build()
+            val type = Types.newParameterizedType(List::class.java, Task::class.java)
+            val ciaoAdapter = moshiBuilder.adapter<List<Task>>(type)
+            tasks = (ciaoAdapter.fromJson(jsonFile.readText()) ?: emptyList())!!.toMutableList()
+        }
     }
 
     private fun deleteTask() {
@@ -34,6 +80,7 @@ class Task(
                     val input = readln().trim().toInt()
                     tasks.removeAt(input - 1)
                     println("The task is deleted")
+                    saveData()
                     break
                 } catch (e: IllegalArgumentException) {
                     println("Invalid task number")
@@ -62,6 +109,7 @@ class Task(
 
                     changeTaskField(tasks[input - 1])
                     println("The task is changed")
+                    saveData()
                     break
 
                 } catch (e: IllegalArgumentException) {
@@ -136,9 +184,9 @@ class Task(
         val numberOfDays = task.day?.let { currentDate.daysUntil(it.toKotlinLocalDate()) }
         if (numberOfDays != null) {
             return (when {
-                numberOfDays == 0 -> Color.GREEN.color
-                numberOfDays > 0 -> Color.YELLOW.color
-                else -> Color.RED.color
+                numberOfDays == 0 -> "\u001B[103m \u001B[0m"
+                numberOfDays > 0 -> "\u001B[102m \u001B[0m"
+                else -> "\u001B[101m \u001B[0m"
             })
         }
         return ""
@@ -237,7 +285,9 @@ class Task(
                     val dayInput = task.chooseDay()
                     val timeInput = task.chooseTime()
                     val taskText = task.setText()
-                    task.createTaskList(taskPriorityInput, dayInput, timeInput, taskText)
+                    val deadlineColor = task.setShelfDate(task)
+                    task.createTaskList(taskPriorityInput, dayInput, timeInput, taskText, deadlineColor)
+                    task.saveData()
                 }
 
                 "print" -> task.printList(tasks)
@@ -330,6 +380,35 @@ class Task(
 
 fun main() {
     val task = Task()
+    task.retrieveData()
     task.chooseAction(task)
 
+}
+
+
+class LocalTimeJsonAdapter : JsonAdapter<LocalTime>() {
+    @FromJson
+    override fun fromJson(reader: JsonReader): LocalTime? {
+        val timeString = reader.nextString()
+        return LocalTime.parse(timeString)
+    }
+
+    @ToJson
+    override fun toJson(writer: JsonWriter, value: LocalTime?) {
+        writer.value(value.toString())
+    }
+}
+
+class LocalDateJsonAdapter : JsonAdapter<LocalDate>() {
+
+    @FromJson
+    override fun fromJson(reader: JsonReader): LocalDate? {
+        val dateString = reader.nextString()
+        return LocalDate.parse(dateString)
+    }
+
+    @ToJson
+    override fun toJson(writer: JsonWriter, value: LocalDate?) {
+        writer.value(value.toString())
+    }
 }
